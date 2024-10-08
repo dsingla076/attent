@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee - Project Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+            width: calc(100% - 22px);
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007BFF;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f4f4f4;
+        }
+
+        canvas {
+            margin-top: 20px;
+        }
+
+        .status-button {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: white;
+        }
+
+        .not-started {
+            background-color: #dc3545;
+        }
+
+        .in-progress {
+            background-color: #ffc107;
+        }
+
+        .completed {
+            background-color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Project Management System</h1>
+        
+        <h2>View Assigned Projects</h2>
+        <form id="viewProjectForm">
+            <input type="text" id="employeeName" name="employeeName" placeholder="Enter your name" required>
+            <button type="button" onclick="showAssignedProjects()">View Projects</button>
+        </form>
+        
+        <h2>Assigned Projects</h2>
+        <table id="assignedProjectsTable">
+            <thead>
+                <tr>
+                    <th>Project Name</th>
+                    <th>Deadline</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <h2>Project Status Overview</h2>
+        <canvas id="employeePieChart"></canvas>
+    </div>
+
+    <script>
+        function showAssignedProjects() {
+            const employeeName = document.getElementById('employeeName').value;
+            let projects = JSON.parse(localStorage.getItem('projectRecords')) || [];
+            const assignedProjects = projects.filter(project => project.assignee.toLowerCase() === employeeName.toLowerCase());
+
+            const tableBody = document.querySelector('#assignedProjectsTable tbody');
+            tableBody.innerHTML = '';
+
+            assignedProjects.forEach((project) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${project.projectName}</td>
+                    <td>${project.deadline}</td>
+                    <td>
+                        <button class="status-button ${project.status.toLowerCase().replace(/ /g, '-')}" onclick="updateEmployeeStatus('${project.projectName}', this)">${project.status}</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            displayEmployeeChart(assignedProjects);
+        }
+
+        function updateEmployeeStatus(projectName, button) {
+            let projects = JSON.parse(localStorage.getItem('projectRecords'));
+            const projectIndex = projects.findIndex(project => project.projectName === projectName);
+
+            if (projectIndex !== -1) {
+                switch (projects[projectIndex].status) {
+                    case 'Not Started':
+                        projects[projectIndex].status = 'In Progress';
+                        break;
+                    case 'In Progress':
+                        projects[projectIndex].status = 'Completed';
+                        break;
+                    case 'Completed':
+                        projects[projectIndex].status = 'Not Started';
+                        break;
+                }
+
+                localStorage.setItem('projectRecords', JSON.stringify(projects));
+
+                // Update button text and class immediately
+                button.innerText = projects[projectIndex].status;
+                button.className = `status-button ${projects[projectIndex].status.toLowerCase().replace(/ /g, '-')}`;
+
+                displayEmployeeChart(projects.filter(project => project.assignee === projects[projectIndex].assignee));
+            }
+        }
+
+        function displayEmployeeChart(assignedProjects) {
+            const ctx = document.getElementById('employeePieChart').getContext('2d');
+            const completed = assignedProjects.filter(p => p.status === 'Completed').length;
+            const inProgress = assignedProjects.filter(p => p.status === 'In Progress').length;
+            const notStarted = assignedProjects.filter(p => p.status === 'Not Started').length;
+
+            if (window.employeeChart) {
+                window.employeeChart.destroy();
+            }
+
+            window.employeeChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Completed', 'In Progress', 'Not Started'],
+                    datasets: [{
+                        data: [completed, inProgress, notStarted],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                    }]
+                }
+            });
+        }
+    </script>
+</body>
+</html>
